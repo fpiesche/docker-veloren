@@ -1,28 +1,18 @@
-FROM debian:bullseye-slim as builder
+FROM rust:1.58.1-alpine3.15 as builder
 
-ADD ./veloren /build
-WORKDIR /build
-RUN apt-get install \
-    libglib2.0-dev \
-    libasound2-dev \
-    libcairo2-dev \
-    libpango1.0-dev \
-    libatk1.0-dev \
-    libgtk-3-dev \
-    libxcb-shape0-dev \
-    libxcb-xfixes0-dev \
-    libudev-dev \
-    libxkbcommon-x11-dev \
-    libxcb-xkb-dev
+RUN apk add --no-cache git musl-dev && git clone https://gitlab.com/veloren/veloren
+WORKDIR /veloren
+ENV RUST_BACKTRACE=1
 RUN cargo build --release --bin veloren-server-cli
 
+FROM alpine:3.15 as server
 
-FROM debian:bullseye-slim as server
+COPY --from=builder /veloren/target/release/veloren-server-cli /opt/veloren-server-cli
+COPY --from=builder /veloren/assets/common /opt/assets/common
+COPY --from=builder /veloren/assets/server /opt/assets/server
+COPY --from=builder /veloren/assets/world /opt/assets/world
 
-COPY --from=builder /build/veloren-server-cli /opt/veloren-server-cli
-COPY --from=builder /build/assets/common /opt/assets/common
-COPY --from=builder /build/assets/server /opt/assets/server
-COPY --from=builder /build/assets/world /opt/assets/world
-
+VOLUME /opt/userdata
+ENV VELOREN_USERDATA=/opt/userdata
 EXPOSE 14004 14005
 CMD "/opt/veloren-server-cli"
