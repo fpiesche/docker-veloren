@@ -33,6 +33,7 @@ jobs:
         run: |
           cd veloren
           git fetch --tags
+          git for-each-ref refs/tags --sort=-taggerdate --format='%(refname)' --count=1 | grep -ve "nightly"
           VELOREN_VERSION=$(git for-each-ref refs/tags --sort=-taggerdate --format='%(refname)' --count=1 | grep -ve "nightly")
           echo "VELOREN_VERSION=${VELOREN_VERSION}" >> $GITHUB_ENV
           echo "VELOREN_COMMIT=$(git rev-parse --short ${VELOREN_VERSION})" >> $GITHUB_ENV
@@ -78,7 +79,7 @@ jobs:
         if: ${{ env.BUILD_RELEASE == 'true' }}
         uses: docker/build-push-action@v2
         with:
-          file: Dockerfile.${{ env.IMAGE_NAME }}
+          file: Dockerfile
           build-args: VELOREN_VERSION=${{ env.VELOREN_VERSION }}
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME || 'nobody' }}/${{ env.IMAGE_NAME }}:latest
