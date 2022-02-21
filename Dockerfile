@@ -1,6 +1,6 @@
 FROM debian:bullseye-slim as builder
 
-ADD . /build
+ADD ./veloren /build
 WORKDIR /build
 RUN apt-get install \
     libglib2.0-dev \
