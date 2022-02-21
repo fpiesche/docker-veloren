@@ -1,18 +1,18 @@
-FROM rust:1.58.1-alpine3.15 as builder
+FROM rust:1.58.1-slim-bullseye as builder
 
-RUN apk add --no-cache git musl-dev && git clone https://gitlab.com/veloren/veloren
-WORKDIR /veloren
+ADD . /build
+WORKDIR /build/veloren
 ENV RUST_BACKTRACE=1
 RUN cargo build --release --bin veloren-server-cli
 
-FROM alpine:3.15 as server
+FROM debian:bullseye-slim as server
 ARG VELOREN_VERSION=unknown
 ARG VELOREN_COMMIT=unknown
 
-COPY --from=builder /veloren/target/release/veloren-server-cli /opt/veloren-server-cli
-COPY --from=builder /veloren/assets/common /opt/assets/common
-COPY --from=builder /veloren/assets/server /opt/assets/server
-COPY --from=builder /veloren/assets/world /opt/assets/world
+COPY --from=builder /build/veloren/target/release/veloren-server-cli /opt/veloren-server-cli
+COPY --from=builder /build/veloren/assets/common /opt/assets/common
+COPY --from=builder /build/veloren/assets/server /opt/assets/server
+COPY --from=builder /build/veloren/assets/world /opt/assets/world
 
 VOLUME /opt/userdata
 ENV VELOREN_USERDATA=/opt/userdata VELOREN_VERSION=${VELOREN_VERSION} VELOREN_COMMIT=${VELOREN_COMMIT}
