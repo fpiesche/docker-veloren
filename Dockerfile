@@ -6,6 +6,8 @@ ENV RUST_BACKTRACE=1
 RUN cargo build --release --bin veloren-server-cli
 
 FROM alpine:3.15 as server
+ARG VELOREN_VERSION=unknown
+ARG VELOREN_COMMIT=unknown
 
 COPY --from=builder /veloren/target/release/veloren-server-cli /opt/veloren-server-cli
 COPY --from=builder /veloren/assets/common /opt/assets/common
@@ -13,6 +15,6 @@ COPY --from=builder /veloren/assets/server /opt/assets/server
 COPY --from=builder /veloren/assets/world /opt/assets/world
 
 VOLUME /opt/userdata
-ENV VELOREN_USERDATA=/opt/userdata
+ENV VELOREN_USERDATA=/opt/userdata VELOREN_VERSION=${VELOREN_VERSION} VELOREN_COMMIT=${VELOREN_COMMIT}
 EXPOSE 14004 14005
 CMD "/opt/veloren-server-cli"
