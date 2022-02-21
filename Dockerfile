@@ -1,11 +1,12 @@
-FROM rust:1.58.1-slim-bullseye as builder
+FROM rust:1.58.1-alpine3.15 as builder
 
 ADD . /build
+RUN apk add --no-cache git musl-dev
 WORKDIR /build/veloren
 ENV RUST_BACKTRACE=1
 RUN cargo build --release --bin veloren-server-cli
 
-FROM debian:bullseye-slim as server
+FROM alpine:3.15 as server
 ARG VELOREN_VERSION=unknown
 ARG VELOREN_COMMIT=unknown
 
