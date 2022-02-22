@@ -5,8 +5,8 @@ RUN apk add --no-cache git musl-dev
 WORKDIR /build/veloren
 ENV RUST_BACKTRACE=1
 RUN cargo build --bin veloren-server-cli
-RUN export GITFILES=$(dirname $(find /build/veloren/target/debug/ -name "githash") && \
-    cp $GITFILES/git* /build/veloren/target/debug/
+RUN find /build/veloren/target/debug -name "githash" && \
+    cp $(dirname $(find /build/veloren/target/debug -name "githash")/git* /build/veloren/target/debug/
 
 FROM alpine:3.15 as server
 ARG VELOREN_VERSION=unknown
