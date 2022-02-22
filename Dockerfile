@@ -4,7 +4,7 @@ ADD . /build
 RUN apk add --no-cache git musl-dev
 WORKDIR /build/veloren
 ENV RUST_BACKTRACE=1
-RUN cargo build --release --bin veloren-server-cli
+RUN cargo build -j 1 --release --bin veloren-server-cli
 
 FROM alpine:3.15 as server
 ARG VELOREN_VERSION=unknown
