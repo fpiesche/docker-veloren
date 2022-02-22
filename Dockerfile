@@ -10,7 +10,7 @@ FROM alpine:3.15 as server
 ARG VELOREN_VERSION=unknown
 ARG VELOREN_COMMIT=unknown
 
-COPY --from=builder /build/veloren/target/release/veloren-server-cli /opt/veloren-server-cli
+COPY --from=builder /build/veloren/target/debug/veloren-server-cli /opt/veloren-server-cli
 COPY --from=builder /build/veloren/assets/common /opt/assets/common
 COPY --from=builder /build/veloren/assets/server /opt/assets/server
 COPY --from=builder /build/veloren/assets/world /opt/assets/world
