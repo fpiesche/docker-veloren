@@ -26,8 +26,8 @@ jobs:
     strategy:
       matrix:
         # Not doing Release builds because they straight up murder Github's build agents
-        # BUILDTYPE: [ "Debug", "Release" ]
-        BUILDTYPE: [ "Debug" ]
+        # BUILDTYPE: [ "debug", "release" ]
+        BUILDTYPE: [ "debug" ]
 
     steps:
       - uses: actions/checkout@v2
