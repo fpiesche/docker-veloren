@@ -70,9 +70,7 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME || 'nobody' }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-nightly
             ${{ secrets.DOCKERHUB_USERNAME || 'nobody' }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}
-            ${{ secrets.DOCKERHUB_USERNAME || 'nobody' }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-${{ env.VELOREN_COMMIT }}
             ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-nightly
             ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-${{ env.VELOREN_COMMIT }}
           platforms: ${{ env.PLATFORMS }}
           push: ${{ env.PUSH_IMAGE }}
