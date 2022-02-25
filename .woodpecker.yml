@@ -1,0 +1,11 @@
+pipeline:
+  build:
+    image: rust:1.59.0-alpine3.15
+    commands:
+    - apk add --no-cache git musl-dev
+    - cargo build --bin veloren-server-cli
+    - cp $(dirname $(find /build/veloren/target/debug -name "githash" -size +0))/git* veloren/target/debug/
+  container:
+    image: plugins/docker
+    settings:
+      dockerfile: imageonly.dockerfile
