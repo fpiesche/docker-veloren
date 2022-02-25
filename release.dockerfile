@@ -1,4 +1,4 @@
-FROM rust:1.58.1-alpine3.15 as builder
+FROM rust:1.59.0-alpine3.15 as builder
 
 ADD . /build
 RUN apk add --no-cache git musl-dev
