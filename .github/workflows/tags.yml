@@ -122,8 +122,9 @@ jobs:
       - name: "[RELEASE] Tarball build artifacts"
         if: ${{ env.BUILD_RELEASE == 'true' }}
         run: |
-          for platform in ./artifacts/*; do
-            tar cvzf ${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}.$platform.tar.gz ${{ github.workspace }}/artifacts/$platform/*
+          for artifact in ${{ github.workspace }}/artifacts/*; do
+            platform=$(basename $artifact)
+            tar cvzf ${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}.$platform.tar.gz $artifact/*
           done
 
       - name: "[RELEASE] Publish amd64 artifact"
