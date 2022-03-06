@@ -31,11 +31,11 @@ jobs:
         BUILDTYPE: [ "debug" ]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
         with:
           submodules: 'true'
 
-      - name: Get latest non-nightly Veloren tag
+      - name: Get Docker build arguments and check out latest non-nightly Veloren tag
         run: |
           cd veloren
           git fetch --tags
@@ -43,6 +43,11 @@ jobs:
           echo "Latest tag is ${VELOREN_VERSION}."
           echo "VELOREN_VERSION=${VELOREN_VERSION}" >> $GITHUB_ENV
           echo "VELOREN_COMMIT=$(git rev-parse --short ${VELOREN_VERSION})" >> $GITHUB_ENV
+          if [ ${{ matrix.BUILDTYPE}} == "release" ]; then
+            echo VELOREN_BUILD_ARGS=--release >> $GITHUB_ENV
+          else
+            echo VELOREN_BUILD_ARGS=--debug >> $GITHUB_ENV
+          fi
           git checkout ${VELOREN_VERSION}
 
       - name: Check whether ${{ env.VELOREN_VERSION }} needs building
@@ -86,7 +91,9 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           file: ${{ matrix.BUILDTYPE }}.dockerfile
-          build-args: VELOREN_VERSION=${{ env.VELOREN_VERSION }}
+          build-args: |
+            VELOREN_VERSION=${{ env.VELOREN_VERSION }}
+            BUILD_ARGS=${{ env.VELOREN_BUILD_ARGS }}
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME || 'nobody' }}/${{ env.IMAGE_NAME }}:latest
             ${{ secrets.DOCKERHUB_USERNAME || 'nobody' }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}
@@ -94,3 +101,10 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}
           platforms: ${{ env.PLATFORMS }}
           push: ${{ env.PUSH_IMAGE }}
+          outputs: type=tar,dest=./artifacts/veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}.tar
+
+      - name: Publish server build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: veloren-server-${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}
+          path: ./artifacts

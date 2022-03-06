@@ -30,7 +30,7 @@ jobs:
         BUILDTYPE: [ "debug" ]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
         with:
           submodules: 'true'
 
@@ -55,18 +55,24 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Get current commit on submodule
+      - name: Get Docker build arguments (date stamp, current Veloren commit, build type)
         run: |
           echo VELOREN_COMMIT=$(git rev-parse --short @:./veloren) >> $GITHUB_ENV
           echo DATESTAMP=$(date +%Y.%m.%d) >> $GITHUB_ENV
+          if [ ${{ matrix.BUILDTYPE}} == "release" ]; then
+            echo VELOREN_BUILD_ARGS=--release >> $GITHUB_ENV
+          else
+            echo VELOREN_BUILD_ARGS=--debug >> $GITHUB_ENV
+          fi
 
       - name: Build and push ${{ env.IMAGE_NAME }} Docker image
         uses: docker/build-push-action@v2
         with:
-          file: ${{ matrix.BUILDTYPE }}.dockerfile
+          file: Dockerfile
           build-args: |
             VELOREN_COMMIT=${{ env.VELOREN_COMMIT }}
             VELOREN_VERSION=${{ env.DATESTAMP }}
+            BUILD_ARGS=${{ env.VELOREN_BUILD_ARGS }}
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME || 'nobody' }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-nightly
             ${{ secrets.DOCKERHUB_USERNAME || 'nobody' }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}
@@ -74,3 +80,10 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}
           platforms: ${{ env.PLATFORMS }}
           push: ${{ env.PUSH_IMAGE }}
+          outputs: type=tar,dest=./artifacts/veloren-server-${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}.tar
+
+      - name: Publish server build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: veloren-server-${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}
+          path: ./artifacts
