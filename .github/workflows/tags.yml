@@ -51,7 +51,7 @@ jobs:
             echo VELOREN_BUILD_ARGS=--release >> $GITHUB_ENV
             echo VELOREN_IMAGE_TAG=latest >> $GITHUB_ENV
           else
-            echo VELOREN_BUILD_ARGS=--debug >> $GITHUB_ENV
+            echo VELOREN_BUILD_ARGS="" >> $GITHUB_ENV
             echo VELOREN_IMAGE_TAG=debug-latest >> $GITHUB_ENV
           fi
 
