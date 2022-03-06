@@ -55,7 +55,6 @@ jobs:
             echo VELOREN_IMAGE_TAG=debug-latest >> $GITHUB_ENV
           fi
 
-
       - name: Check whether ${{ env.VELOREN_VERSION }} needs building
         if: ${{ env.PUSH_IMAGE == 'true' }}
         run: |
