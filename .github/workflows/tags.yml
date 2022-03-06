@@ -99,8 +99,10 @@ jobs:
           build-args: |
             VELOREN_VERSION=${{ env.VELOREN_VERSION }}
             BUILD_ARGS=${{ env.VELOREN_BUILD_ARGS }}
+          # outputs: type=local,dest=./artifacts
           outputs: type=tar,dest=${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}.tar
           platforms: ${{ env.PLATFORMS }}
+          push: false
           target: exporter
 
       - name: Publish server build artifacts
