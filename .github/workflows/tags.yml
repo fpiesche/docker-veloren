@@ -37,9 +37,6 @@ jobs:
 
       - name: Get Docker build arguments and check out latest non-nightly Veloren tag
         run: |
-          # Ensure the artifacts output directory exists
-          mkdir artifacts
-
           # Get latest non-nightly tag in the Veloren repo and check it out
           cd veloren
           git fetch --tags
@@ -107,7 +104,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}
           platforms: ${{ env.PLATFORMS }}
           push: ${{ env.PUSH_IMAGE }}
-          outputs: type=tar,dest=./artifacts/veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}.tar
+          outputs: type=local,dest=./artifacts
 
       - name: Publish server build artifacts
         uses: actions/upload-artifact@v3
