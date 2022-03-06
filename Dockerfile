@@ -5,8 +5,8 @@ ARG BUILD_ARGS=""
 
 ADD . /build
 WORKDIR /build/veloren
-ENV RUST_BACKTRACE=1 BUILD_ARGS=${BUILD_ARGS}
-RUN cargo build $BUILD_ARGS --bin veloren-server-cli
+ENV RUST_BACKTRACE=1 BUILD_ARGS=$BUILD_ARGS
+RUN cargo build ${BUILD_ARGS} --bin veloren-server-cli
 
 # Empty container to export using docker build --target=exporter --outputs=tar,veloren.tar
 FROM scratch as exporter
