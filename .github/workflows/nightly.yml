@@ -62,7 +62,7 @@ jobs:
           if [ ${{ matrix.BUILDTYPE}} == "release" ]; then
             echo VELOREN_BUILD_ARGS=--release >> $GITHUB_ENV
           else
-            echo VELOREN_BUILD_ARGS=--debug >> $GITHUB_ENV
+            echo VELOREN_BUILD_ARGS="" >> $GITHUB_ENV
           fi
 
       - name: Build and push ${{ env.IMAGE_NAME }} Docker image
@@ -80,7 +80,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}
           platforms: ${{ env.PLATFORMS }}
           push: ${{ env.PUSH_IMAGE }}
-          outputs: type=tar,dest=./artifacts/veloren-server-${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}.tar
+          outputs: type=local,dest=./artifacts
 
       - name: Publish server build artifacts
         uses: actions/upload-artifact@v3
