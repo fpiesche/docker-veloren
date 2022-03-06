@@ -3,9 +3,10 @@
 FROM rust:1.59.0-slim-bullseye as builder
 ARG BUILD_ARGS=""
 
+RUN apt update && apt install -y git
 ADD . /build
 WORKDIR /build/veloren
-ENV RUST_BACKTRACE=1 BUILD_ARGS=$BUILD_ARGS
+ENV RUST_BACKTRACE=full BUILD_ARGS=$BUILD_ARGS
 RUN cargo build ${BUILD_ARGS} --bin veloren-server-cli
 
 # Empty container to export using docker build --target=exporter --outputs=tar,veloren.tar
