@@ -99,7 +99,7 @@ jobs:
         run: |
           for artifact in ${{ github.workspace }}/artifacts/*; do
             platform=$(basename $artifact)
-            tar cvzf ${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}.$platform.tar.gz $artifact/*
+            tar czf ${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}.$platform.tar.gz -C $artifact *
           done
 
       - name: "[RELEASE] Publish amd64 artifact"
