@@ -4,6 +4,7 @@ branches:
 pipeline:
   build-tags:
     image: woodpeckerci/plugin-docker-buildx
+    pull: true
     environment:
       - PLATFORMS="linux/arm64/v8,linux/amd64"
       - IMAGE_NAME="veloren-server"
@@ -15,9 +16,9 @@ pipeline:
       cd veloren
       git fetch --tags
       export VELOREN_VERSION=$(git for-each-ref refs/tags --sort=-taggerdate --format='%(refname)' --count=2 | grep -ve "nightly" | sed "s:refs/tags/::")
-      export VELOREN_COMMIT="$(git rev-parse --short ${VELOREN_VERSION})"
-      echo "Latest tag is ${VELOREN_VERSION}."
-      git checkout ${VELOREN_VERSION}
+      export VELOREN_COMMIT="$(git rev-parse --short $${VELOREN_VERSION})"
+      echo "Latest tag is $${VELOREN_VERSION}."
+      git checkout $${VELOREN_VERSION}
 
       # Set up build mode arguments and "latest" image tag for Docker
       if [ ${BUILDTYPE} == "release" ]; then
@@ -28,10 +29,10 @@ pipeline:
         export VELOREN_IMAGE_TAG="debug-latest"
       fi
 
-      SERVER_TAGS=$(curl -s https://registry.hub.docker.com/v1/repositories/${{ secrets.DOCKERHUB_USERNAME }}/${IMAGE_NAME}/tags | jq -r ".[].name") || SERVER_TAGS="none"
-      for tag in ${SERVER_TAGS[@]}; do
-        if [[ "$tag" == "${VELOREN_VERSION}" ]]; then
-          echo "Release ${tag} has already been built."
+      SERVER_TAGS=$(curl -s https://registry.hub.docker.com/v1/repositories/$${DOCKERHUB_USERNAME}/$${IMAGE_NAME}/tags | jq -r ".[].name") || SERVER_TAGS="none"
+      for tag in $${SERVER_TAGS[@]}; do
+        if [[ "$tag" == "$${VELOREN_VERSION}" ]]; then
+          echo "Release $${tag} has already been built."
           export BUILD_RELEASE="false"
           exit
         fi
@@ -39,7 +40,7 @@ pipeline:
 
       # we always want to build the server
       docker buildx create --use
-      docker buildx build --build-arg VELOREN_VERSION=${VELOREN_VERSION} --build-arg BUILD_ARGS=${VELOREN_BUILD_ARGS} \
+      docker buildx build --build-arg VELOREN_VERSION=$${VELOREN_VERSION} --build-arg BUILD_ARGS=$${VELOREN_BUILD_ARGS} \
         --output type=local,dest=./artifacts \
         --platforms ${PLATFORMS} \
         --target exporter
