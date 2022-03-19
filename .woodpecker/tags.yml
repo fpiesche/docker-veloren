@@ -46,8 +46,8 @@ pipeline:
     secrets:
       - docker_password
     settings:
-      # dry_run: true
-      # repo: florianpiesche/veloren-server
+      dry_run: true
+      repo: florianpiesche/veloren-server
       dockerfile: Dockerfile
       args:
         - VELOREN_VERSION=$VELOREN_VERSION
