@@ -15,9 +15,9 @@ pipeline:
       cd veloren
       git fetch --tags
 
-      export VELOREN_GIT_TAG=$(git for-each-ref refs/tags --sort=-taggerdate --format='%(refname)' --count=2 | grep -ve 'nightly' | sed 's:refs/tags/::')
-      echo "export VELOREN_VERSION=$VELOREN_GIT_TAG" >> .build_env
-      echo "export VELOREN_COMMIT=$(git rev-parse --short $VELOREN_GIT_TAG)" >> .build_env
+      export VELOREN_VERSION=$(git for-each-ref refs/tags --sort=-taggerdate --format='%(refname)' --count=2 | grep -ve 'nightly' | sed 's:refs/tags/::')
+      echo "export VELOREN_VERSION=$VELOREN_VERSION" >> .build_env
+      echo "export VELOREN_COMMIT=$(git rev-parse --short $VELOREN_VERSION)" >> .build_env
 
       # Set up build mode arguments and "latest" image tag for Docker
       if [ ${BUILDTYPE} == "release" ]; then
@@ -27,10 +27,6 @@ pipeline:
         echo "export VELOREN_BUILD_ARGS=''" >> .build_env
         echo "export VELOREN_IMAGE_TAG='debug-latest'" >> .build_env
       fi
-
-      apt update; apt install -y jq
-      cd veloren
-      source .build_env
 
       # Check whether we actually need to build this release
       for tag in $(curl -s https://registry.hub.docker.com/v1/repositories/$DOCKERHUB_USERNAME/$IMAGE_NAME/tags | jq -r ".[].name"); do
