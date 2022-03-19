@@ -11,7 +11,7 @@ pipeline:
     image: alpine
     commands:
     - |
-      apk add --no-cache git
+      apk add --no-cache git jq curl
       cd veloren
       git fetch --tags
 
@@ -28,18 +28,36 @@ pipeline:
         echo "export VELOREN_IMAGE_TAG='debug-latest'" >> .build_env
       fi
 
-  build-images:
-    image: jonoh/docker-buildx-qemu
+      apt update; apt install -y jq
+      cd veloren
+      source .build_env
+
+      # Check whether we actually need to build this release
+      for tag in $(curl -s https://registry.hub.docker.com/v1/repositories/$DOCKERHUB_USERNAME/$IMAGE_NAME/tags | jq -r ".[].name"); do
+          if [[ "$tag" == "$VELOREN_VERSION" ]]; then
+              echo "Release $tag has already been built."
+              echo "export BUILD_RELEASE=false" >> .build_env
+              exit
+          fi
+      done
+
+      # If we do, make sure the submodule is checked out to the tag to build
+      git checkout $VELOREN_VERSION
+
+  build-local:
+    group: build-images
+    image: woodpeckerci/plugin-docker-buildx
     secrets:
-      - DOCKERHUB_TOKEN
-      - GITHUB_TOKEN
-    environment:
-      - PLATFORMS="linux/arm64/v8,linux/amd64"
-      - IMAGE_NAME=veloren-server
-      - DOCKERHUB_USERNAME=florianpiesche
-      - GITHUB_USERNAME=fpiesche
-    commands:
-    - apt update; apt install -y jq
-    - export DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN}
-    - export GITHUB_TOKEN=${GITHUB_TOKEN}
-    - /bin/bash -x build-image.sh
+      - docker_password
+    settings:
+      # dry_run: true
+      # repo: florianpiesche/veloren-server
+      dockerfile: Dockerfile
+      args:
+        - VELOREN_VERSION=$VELOREN_VERSION
+        - BUILD_ARGS=$VELOREN_BUILD_ARGS
+      platforms: linux/arm64/v8,linux/amd64
+      # tag:
+      #   - $VELOREN_VERSION
+      #   - $BUILDTYPE-latest
+      target: exporter
