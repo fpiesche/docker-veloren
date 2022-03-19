@@ -31,7 +31,7 @@ pipeline:
       cat .build_env
 
   build-images:
-    image: woodpeckerci/plugin-docker-buildx
+    image: jonoh/docker-buildx-qemu
     environment:
       - PLATFORMS="linux/arm64/v8,linux/amd64"
       - IMAGE_NAME="veloren-server"
@@ -54,7 +54,10 @@ pipeline:
       cd ..
 
       # we always want to build the server
-      docker buildx create --use
+      docker buildx create --driver docker-container --use
+      docker buildx inspect --bootstrap
+      update-binfmts --enable
+
       docker buildx build --build-arg VELOREN_VERSION=$VELOREN_VERSION --build-arg BUILD_ARGS=$VELOREN_BUILD_ARGS \
         --output type=local,dest=./artifacts \
         --platforms $PLATFORMS \
