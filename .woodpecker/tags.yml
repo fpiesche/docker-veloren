@@ -41,4 +41,5 @@ pipeline:
       - GITHUB_USERNAME
       - GITHUB_TOKEN
     commands:
+    - apt update; apt install -y jq
     - /bin/bash build-image.sh
