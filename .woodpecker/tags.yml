@@ -34,7 +34,7 @@ pipeline:
     image: jonoh/docker-buildx-qemu
     environment:
       - PLATFORMS="linux/arm64/v8,linux/amd64"
-      - IMAGE_NAME="veloren-server"
+      - IMAGE_NAME=veloren-server
     secrets:
       - DOCKERHUB_USERNAME
       - DOCKERHUB_TOKEN
