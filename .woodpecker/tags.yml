@@ -9,7 +9,7 @@ matrix:
 pipeline:
   build-env:
     when:
-      tag: "*"
+      event: tag
 
     image: alpine
     commands:
@@ -45,7 +45,7 @@ pipeline:
 
   build-local:
     when:
-      tag: "*"
+      event: tag
 
     group: build-images
     image: woodpeckerci/plugin-docker-buildx
