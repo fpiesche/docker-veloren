@@ -50,10 +50,10 @@ pipeline:
       repo: florianpiesche/veloren-server
       dockerfile: Dockerfile
       args:
-        - VELOREN_VERSION=$VELOREN_VERSION
-        - BUILD_ARGS=$VELOREN_BUILD_ARGS
+        - "VELOREN_VERSION=$VELOREN_VERSION"
+        - "BUILD_ARGS=$VELOREN_BUILD_ARGS"
       platforms: linux/arm64/v8,linux/amd64
-      # tag:
-      #   - $VELOREN_VERSION
-      #   - $BUILDTYPE-latest
-      target: exporter
+      tag:
+        - $VELOREN_VERSION
+        - $BUILDTYPE-latest
+      target: server
