@@ -48,17 +48,14 @@ pipeline:
       event: tag
 
     group: build-images
-    image: woodpeckerci/plugin-docker-buildx
+    image: maniator/dind-buildx
     secrets:
       - docker_password
-    settings:
-      dry_run: true
-      repo: florianpiesche/veloren-server
-      dockerfile: Dockerfile
-      args:
-        - "VELOREN_VERSION=${CI_COMMIT_TAG}"
-      platforms: linux/arm64/v8,linux/amd64
-      tag:
-        - ${CI_COMMIT_TAG}
-        - ${BUILDTYPE}-latest
-      target: server
+    commands:
+    - |
+      docker buildx build --platform=linux/arm64/v8,linux/amd64 \
+        -f Dockerfile . \
+        --target=exporter --output=type=local,dest=./artifacts \
+        --build-arg VELOREN_VERSION=${CI_COMMIT_TAG} \
+        -t florianpiesche/veloren-server:${CI_COMMIT_TAG} \
+        -t florianpiesche/veloren-server:${BUILDTYPE}-latest
