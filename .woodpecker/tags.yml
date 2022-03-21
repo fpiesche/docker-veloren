@@ -56,9 +56,9 @@ pipeline:
       repo: florianpiesche/veloren-server
       dockerfile: Dockerfile
       args:
-        - "VELOREN_VERSION=$CI_COMMIT_TAG"
+        - "VELOREN_VERSION=${CI_COMMIT_TAG}"
       platforms: linux/arm64/v8,linux/amd64
       tag:
-        - $CI_COMMIT_TAG
-        - $BUILDTYPE-latest
+        - ${CI_COMMIT_TAG}
+        - ${BUILDTYPE}-latest
       target: server
