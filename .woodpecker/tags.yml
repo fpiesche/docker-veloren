@@ -52,7 +52,7 @@ pipeline:
     secrets:
       - docker_password
     environment:
-      DOCKER_HOST: tcp://10.42.3.25:2375
+      DOCKER_HOST: tcp://buildkit:2375
     commands:
     - |
       docker buildx create --driver=kubernetes
