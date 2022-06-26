@@ -40,7 +40,8 @@ jobs:
 
       - name: Generate timestamp
         run: |
-          export DATESTAMP=$(date --date="-1 days" +%Y-%m-%d) >> $GITHUB_ENV
+          DATESTAMP=$(date --date="-1 days" +%Y-%m-%d)
+          echo "DATESTAMP=${DATESTAMP}" >> $GITHUB_ENV
 
       - name: Generate Docker image metadata
         id: docker-meta
@@ -50,7 +51,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
             ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,${{ env.DATESTAMP }}
+            type=raw,v${{ env.DATESTAMP }}
             type=raw,nightly
 
       - name: "Login to DockerHub"
