@@ -13,6 +13,10 @@ on:
     paths-ignore:
       - '**/*.md'
 
+  # Run on a daily schedule at 10:30am to update the nightly build.
+  schedule:
+    - cron: '30 10 * * *'
+
 env:
   PLATFORMS: linux/arm64/v8,linux/amd64
   PUSH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
@@ -23,31 +27,40 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        # Not doing Release builds because they straight up murder Github's build agents
-        # BUILDTYPE: [ "debug", "release" ]
-        BUILDTYPE: [ "debug" ]
-
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: 'true'
 
-      - name: "[SETUP] Setup QEMU"
+      - name: "Setup QEMU"
         uses: docker/setup-qemu-action@v2
 
-      - name: "[SETUP] Setup Docker BuildKit"
+      - name: "Setup Docker BuildKit"
         uses: docker/setup-buildx-action@v2
 
-      - name: "[SETUP] Login to DockerHub"
+      - name: Generate timestamp
+        run: |
+          export DATESTAMP=$(date --date="-1 days" +%Y-%m-%d) >> $GITHUB_ENV
+
+      - name: Generate Docker image metadata
+        id: docker-meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,${{ env.DATESTAMP }}
+            type=raw,nightly
+
+      - name: "Login to DockerHub"
         if: ${{ env.PUSH_IMAGE == 'true' }}
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: "[SETUP] Login to GitHub Container Registry"
+      - name: "Login to GitHub Container Registry"
         if: ${{ env.PUSH_IMAGE == 'true' }}
         uses: docker/login-action@v2 
         with:
@@ -55,61 +68,11 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: "[SETUP] Get Docker build arguments (date stamp, current Veloren commit, build type)"
-        run: |
-          echo VELOREN_COMMIT=$(git rev-parse --short @:./veloren) >> $GITHUB_ENV
-          echo DATESTAMP=$(date +%Y.%m.%d) >> $GITHUB_ENV
-          if [ ${{ matrix.BUILDTYPE}} == "release" ]; then
-            echo VELOREN_BUILD_ARGS=--release >> $GITHUB_ENV
-          else
-            echo VELOREN_BUILD_ARGS="" >> $GITHUB_ENV
-          fi
-
-      - name: "[BUILD] Build Veloren ${{ matrix.BUILDTYPE }}-${{ env.DATESTAMP }} server"
+      - name: "Build and push ${{ env.IMAGE_NAME }} Docker image"
         uses: docker/build-push-action@v3
         with:
-          file: Dockerfile
-          build-args: |
-            VELOREN_COMMIT=${{ env.VELOREN_COMMIT }}
-            VELOREN_VERSION=${{ env.DATESTAMP }}
-            BUILD_ARGS=${{ env.VELOREN_BUILD_ARGS }}
+          file: build-server.Dockerfile
           platforms: ${{ env.PLATFORMS }}
-          push: false
-          outputs: type=local,dest=./artifacts
-          target: exporter
-
-      - name: "[BUILD] Build and push ${{ env.IMAGE_NAME }} Docker image"
-        uses: docker/build-push-action@v3
-        with:
-          file: Dockerfile
-          build-args: |
-            VELOREN_COMMIT=${{ env.VELOREN_COMMIT }}
-            VELOREN_VERSION=${{ env.DATESTAMP }}
-            BUILD_ARGS=${{ env.VELOREN_BUILD_ARGS }}
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME || 'nobody' }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-nightly
-            ${{ secrets.DOCKERHUB_USERNAME || 'nobody' }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-nightly
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}
-          platforms: ${{ env.PLATFORMS }}
-          push: ${{ env.PUSH_IMAGE }}
-          target: server
-
-      - name: "[RELEASE] Tarball build artifacts"
-        run: |
-          for artifact in ${{ github.workspace }}/artifacts/*; do
-            platform=$(basename $artifact)
-            tar czf ${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}.$platform.tar.gz -C $artifact *
-          done
-
-      - name: "[RELEASE] Publish amd64 artifact"
-        uses: actions/upload-artifact@v3
-        with:
-          name: veloren-server-${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }} (amd64)
-          path: ${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}.linux_amd64.tar.gz
-
-      - name: "[RELEASE] Publish arm64 artifact"
-        uses: actions/upload-artifact@v3
-        with:
-          name: veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }} (arm64)
-          path: ${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-nightly-${{ env.DATESTAMP }}.linux_arm64.tar.gz
+          push: true
+          tags: ${{ steps.docker-meta.outputs.tags }}
+          labels: ${{ steps.docker-meta.outputs.labels }}

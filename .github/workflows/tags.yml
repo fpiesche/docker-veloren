@@ -4,18 +4,17 @@ on:
   # Allow manual runs.
   workflow_dispatch:
   # Also run on updates to this repo.
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**/*.md'
-  pull_request:
-    paths-ignore:
-      - '**/*.md'
+  # push:
+  #   branches:
+  #     - main
+  #   paths-ignore:
+  #     - '**/*.md'
+  # pull_request:
+  #   paths-ignore:
+  #     - '**/*.md'
 
 env:
   PLATFORMS: linux/arm64/v8,linux/amd64
-  PUSH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
   IMAGE_NAME: "veloren-server"
   BUILD_RELEASE: true
 
@@ -24,43 +23,22 @@ jobs:
   build-images:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        # Not doing Release builds because they straight up murder Github's build agents
-        # BUILDTYPE: [ "debug", "release" ]
-        BUILDTYPE: [ "debug" ]
-
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: 'true'
 
-      - name: "[SETUP] Get Docker build arguments and latest non-nightly Veloren tag"
+      - name: "Get latest Veloren release version"
         run: |
-          # Get latest non-nightly tag in the Veloren repo and check it out
-          cd veloren
-          git fetch --tags
-          VELOREN_VERSION=$(git for-each-ref refs/tags --sort=-taggerdate --format='%(refname)' --count=2 | grep -ve "nightly" | sed "s:refs/tags/::")
-          echo "VELOREN_COMMIT=$(git rev-parse --short ${VELOREN_VERSION})" >> $GITHUB_ENV
-          echo "Latest tag is ${VELOREN_VERSION}."
-          echo "VELOREN_VERSION=${VELOREN_VERSION}" >> $GITHUB_ENV
-          git checkout ${VELOREN_VERSION}
+          LATEST_URL=https://gitlab.com/veloren/veloren/-/releases/permalink/latest
+          LATEST_RELEASE_URL=$(curl -w "%{url_effective}\n" -I -L -s -S ${LATEST_URL} -o /dev/null)
+          echo "VELOREN_VERSION=$(basename ${LATEST_RELEASE_URL})" >> $GITHUB_ENV
 
-          # Set up build mode arguments and "latest" image tag for Docker
-          if [ ${{ matrix.BUILDTYPE}} == "release" ]; then
-            echo VELOREN_BUILD_ARGS=--release >> $GITHUB_ENV
-            echo VELOREN_IMAGE_TAG=latest >> $GITHUB_ENV
-          else
-            echo VELOREN_BUILD_ARGS="" >> $GITHUB_ENV
-            echo VELOREN_IMAGE_TAG=debug-latest >> $GITHUB_ENV
-          fi
-
-      - name: "[SETUP] Check whether ${{ env.VELOREN_VERSION }} needs building"
-        if: ${{ env.PUSH_IMAGE == 'true' }}
+      - name: "Check whether ${{ env.VELOREN_VERSION }} needs building"
         run: |
           # Check whether there already is a Docker image for the current tag
-          SERVER_TAGS=$(curl -s https://registry.hub.docker.com/v1/repositories/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}/tags | jq -r ".[].name") || SERVER_TAGS="none"
-          for tag in ${SERVER_TAGS[@]}; do
+          VELOREN_RELEASE=$(curl -s https://registry.hub.docker.com/v1/repositories/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}/tags | jq -r ".[].name") || VELOREN_RELEASE="none"
+          for tag in ${VELOREN_RELEASE[@]}; do
             if [[ "$tag" == "${VELOREN_VERSION}" ]]; then
               echo "Release ${tag} has already been built."
               echo "BUILD_RELEASE=false" >> $GITHUB_ENV
@@ -68,22 +46,33 @@ jobs:
             fi
           done
 
-      - name: "[SETUP] Setup QEMU"
+      - name: Generate Docker image metadata
+        id: docker-meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,${{ env.DATESTAMP }}
+            type=raw,nightly
+
+      - name: Setup QEMU
         if: ${{ env.BUILD_RELEASE == 'true' }}
         uses: docker/setup-qemu-action@v2
 
-      - name: "[SETUP] Setup Docker BuildKit"
+      - name: Setup Docker BuildKit
         if: ${{ env.BUILD_RELEASE == 'true' }}
         uses: docker/setup-buildx-action@v2
 
-      - name: "[SETUP] Login to DockerHub"
+      - name: Login to DockerHub
         if: ${{ env.PUSH_IMAGE == 'true' }}
         uses: docker/login-action@v2 
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: "[SETUP] Login to GitHub Container Registry"
+      - name: Login to GitHub Container Registry
         if: ${{ env.PUSH_IMAGE == 'true' }}
         uses: docker/login-action@v2 
         with:
@@ -91,87 +80,14 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: "[BUILD] Build Veloren ${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }} server"
+      - name: Build and push ${{ env.IMAGE_NAME }}:${{ env.VELOREN_VERSION }} Docker image
         if: ${{ env.BUILD_RELEASE == 'true' }}
         uses: docker/build-push-action@v3
         with:
           build-args: |
             VELOREN_VERSION=${{ env.VELOREN_VERSION }}
             BUILD_ARGS=${{ env.VELOREN_BUILD_ARGS }}
-          outputs: type=local,dest=./artifacts
-          platforms: ${{ env.PLATFORMS }}
-          push: false
-          target: exporter
-
-      - name: "[BUILD] Build and push ${{ env.IMAGE_NAME }}:${{ env.VELOREN_VERSION }} Docker image"
-        if: ${{ env.BUILD_RELEASE == 'true' }}
-        uses: docker/build-push-action@v3
-        with:
-          build-args: |
-            VELOREN_VERSION=${{ env.VELOREN_VERSION }}
-            BUILD_ARGS=${{ env.VELOREN_BUILD_ARGS }}
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME || 'nobody' }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}
-            ${{ secrets.DOCKERHUB_USERNAME || 'nobody' }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-${{ env.VELOREN_IMAGE_TAG }}
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ matrix.BUILDTYPE }}-${{ env.VELOREN_IMAGE_TAG }}
           platforms: ${{ env.PLATFORMS }}
           push: ${{ env.PUSH_IMAGE }}
-          target: server
-
-      - name: "[RELEASE] Tarball build artifacts"
-        if: ${{ env.BUILD_RELEASE == 'true' }}
-        run: |
-          for artifact in ${{ github.workspace }}/artifacts/*; do
-            platform=$(basename $artifact)
-            tar czf ${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}.$platform.tar.gz -C $artifact *
-          done
-
-      - name: "[RELEASE] Publish amd64 artifact"
-        if: ${{ env.BUILD_RELEASE == 'true' }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }} (amd64)
-          path: ${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}.linux_amd64.tar.gz
-
-      - name: "[RELEASE] Publish arm64 artifact"
-        if: ${{ env.BUILD_RELEASE == 'true' }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }} (arm64)
-          path: ${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}.linux_arm64.tar.gz
-
-      - name: "[RELEASE] Create GitHub release"
-        if: ${{ env.BUILD_RELEASE == 'true' }}
-        uses: actions/create-release@v1
-        id: create_release
-        with:
-          draft: false
-          prerelease: false
-          release_name: Veloren Server ${{ matrix.BUILDTYPE }} ${{ env.VELOREN_VERSION }}
-          tag_name: refs/tags/${{ env.VELOREN_VERSION }}
-          body_path: veloren/CHANGELOG.md
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: "[RELEASE] Upload amd64 artifact to release"
-        if: ${{ env.BUILD_RELEASE == 'true' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}.linux_amd64.tar.gz
-          asset_name: veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}.linux_amd64.tar.gz
-          asset_content_type: application/gzip
-
-      - name: "[RELEASE] Upload arm64 artifact to release"
-        if: ${{ env.BUILD_RELEASE == 'true' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/artifacts/veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}.linux_arm64.tar.gz
-          asset_name: veloren-server-${{ matrix.BUILDTYPE }}-${{ env.VELOREN_VERSION }}.linux_arm64.tar.gz
-          asset_content_type: application/gzip
+          tags: ${{ steps.docker-meta.outputs.tags }}
+          labels: ${{ steps.docker-meta.outputs.labels }}
