@@ -51,7 +51,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
             ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,v${{ env.DATESTAMP }}
+            type=raw,nightly-${{ env.DATESTAMP }}
             type=raw,nightly
 
       - name: "Login to DockerHub"
